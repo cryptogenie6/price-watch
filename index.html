@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PRICE WATCH</title>
+<style>
+  :root {
+    --bg: #0a0c0a;
+    --card: #121412;
+    --text: #c8c8c0;
+    --muted: #6a6a62;
+    --green: #4a7c59;
+    --red: #8b3a3a;
+    --accent: #8a8a78;
+    --border: #1e211e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 20px 12px 90px;
+  }
+  h1 {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .ticker {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+    max-width: 420px;
+  }
+  .coin {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 14px 8px;
+    text-align: center;
+  }
+  .symbol {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+  }
+  .name {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .price {
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+  }
+  .controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px 12px 20px;
+    background: linear-gradient(transparent, var(--bg) 40%);
+    text-align: center;
+  }
+  button {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid #2a2d2a;
+    border-radius: 2px;
+    padding: 12px 28px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 100%;
+    max-width: 240px;
+    font-family: inherit;
+  }
+  button:active { background: #1a1c1a; }
+  button:disabled { opacity: 0.4; }
+  .status {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-top: 10px;
+    text-transform: uppercase;
+  }
+  .error {
+    color: var(--red);
+    font-size: 12px;
+    text-align: center;
+    padding: 24px;
+    letter-spacing: 0.5px;
+  }
+  @media (min-width: 500px) {
+    .ticker { grid-template-columns: repeat(4, 1fr); max-width: 680px; }
+  }
+</style>
+</head>
+<body>
+<h1>Price Watch</h1>
+<div class="ticker" id="ticker"></div>
+
+<div class="controls">
+  <button id="refreshBtn" onclick="manualRefresh()">Update</button>
+  <div class="status" id="status">Standby</div>
+</div>
+
+<script>
+const COINS = [
+  { symbol: "SOL", name: "Solana", pair: "SOL-USD" },
+  { symbol: "ETH", name: "Ethereum", pair: "ETH-USD" },
+  { symbol: "XRP", name: "Ripple", pair: "XRP-USD" },
+  { symbol: "BTC", name: "Bitcoin", pair: "BTC-USD" },
+];
+const REFRESH_SECONDS = 30;
+
+let isLoading = false;
+
+async function fetchPrices() {
+  if (isLoading) return;
+  isLoading = true;
+  const btn = document.getElementById("refreshBtn");
+  const status = document.getElementById("status");
+  btn.disabled = true;
+  btn.textContent = "Updating";
+  status.textContent = "Acquiring";
+
+  try {
+    const results = await Promise.all(
+      COINS.map(async (coin) => {
+        const res = await fetch(`https://api.coinbase.com/v2/prices/${coin.pair}/spot`);
+        if (!res.ok) throw new Error("fail");
+        const json = await res.json();
+        return { ...coin, price: parseFloat(json.data.amount) };
+      })
+    );
+
+    render(results);
+    status.textContent = "Synced " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  } catch (e) {
+    status.textContent = "Link Failed";
+    if (!document.querySelector(".coin")) {
+      document.getElementById("ticker").innerHTML = `<div class="error">No Signal<br>Check connection</div>`;
+    }
+  } finally {
+    isLoading = false;
+    btn.disabled = false;
+    btn.textContent = "Update";
+  }
+}
+
+function render(coins) {
+  const container = document.getElementById("ticker");
+  container.innerHTML = coins.map(coin => {
+    const price = coin.price;
+    const priceStr = price >= 1000
+      ? price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+      : price >= 1
+        ? price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : price.toFixed(4);
+
+    return `
+      <div class="coin">
+        <div class="symbol">${coin.symbol}</div>
+        <div class="name">${coin.name}</div>
+        <div class="price">$${priceStr}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+function manualRefresh() {
+  fetchPrices();
+}
+
+fetchPrices();
+setInterval(fetchPrices, REFRESH_SECONDS * 1000);
+</script>
+</body>
+</html>
