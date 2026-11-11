@@ -24,78 +24,71 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    padding: 16px 10px 100px;
+    padding: 10px 8px 70px;
   }
   h1 {
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 500;
-    letter-spacing: 3px;
+    letter-spacing: 2px;
     text-transform: uppercase;
     color: var(--muted);
-    margin-bottom: 14px;
+    margin-bottom: 8px;
   }
   .ticker {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    gap: 4px;
     width: 100%;
-    max-width: 380px;
+    max-width: 340px;
   }
   .coin {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 2px;
-    padding: 10px 6px;
+    border-radius: 1px;
+    padding: 6px 4px;
     text-align: center;
   }
-  .symbol { font-size: 13px; font-weight: 600; letter-spacing: 1.2px; color: var(--accent); }
-  .name { font-size: 9px; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 6px; text-transform: uppercase; }
-  .price { font-size: 18px; font-weight: 500; letter-spacing: -0.3px; }
-  .change { margin-top: 4px; font-size: 12px; font-weight: 600; }
+  .symbol { font-size: 11px; font-weight: 600; letter-spacing: 1px; color: var(--accent); }
+  .name { font-size: 7px; color: var(--muted); letter-spacing: 0.3px; margin-bottom: 3px; text-transform: uppercase; }
+  .price { font-size: 15px; font-weight: 500; letter-spacing: -0.2px; }
+  .change { margin-top: 2px; font-size: 10px; font-weight: 600; }
   .change.up { color: var(--green); }
   .change.down { color: var(--red); }
-  .label { font-size: 8px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+  .label { font-size: 6px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; margin-top: 1px; }
   .controls {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    padding: 12px 10px 16px;
-    background: linear-gradient(transparent, var(--bg) 35%);
+    padding: 8px 8px 12px;
+    background: linear-gradient(transparent, var(--bg) 30%);
     text-align: center;
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
   }
   button {
     background: transparent;
     color: var(--text);
     border: 1px solid #2a2d2a;
-    border-radius: 2px;
-    padding: 10px 20px;
-    font-size: 11px;
+    border-radius: 1px;
+    padding: 8px 16px;
+    font-size: 10px;
     font-weight: 500;
-    letter-spacing: 1.5px;
+    letter-spacing: 1.2px;
     text-transform: uppercase;
     cursor: pointer;
     font-family: inherit;
-    min-width: 160px;
   }
   button:active { background: #1a1c1a; }
   button:disabled { opacity: 0.4; }
-  #floatBtn { border-color: #3a3d3a; }
-  .status { font-size: 9px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
-  .error { color: var(--red); font-size: 12px; text-align: center; padding: 20px; }
-  video#pipVideo { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-  @media (min-width: 500px) {
-    .ticker { grid-template-columns: repeat(4, 1fr); max-width: 640px; }
+  .status { font-size: 8px; color: var(--muted); letter-spacing: 0.8px; margin-top: 6px; text-transform: uppercase; }
+  .error { color: var(--red); font-size: 11px; text-align: center; padding: 16px; }
+  @media (min-width: 480px) {
+    .ticker { grid-template-columns: repeat(4, 1fr); max-width: 560px; }
   }
 </style>
 </head>
 <body>
 <h1>Price Watch</h1>
 <div class="ticker" id="ticker"></div>
-<video id="pipVideo" playsinline muted></video>
 
 <div class="controls">
-  <button id="floatBtn" onclick="tryFloat()">Float</button>
   <button id="refreshBtn" onclick="manualRefresh()">Update</button>
   <div class="status" id="status">Standby</div>
 </div>
@@ -109,7 +102,6 @@ const COINS = [
 ];
 const REFRESH_SECONDS = 30;
 let isLoading = false;
-let lastCoins = [];
 
 async function fetchPrices() {
   if (isLoading) return;
@@ -132,7 +124,6 @@ async function fetchPrices() {
         return { ...coin, price, change };
       })
     );
-    lastCoins = results;
     render(results);
     status.textContent = "Synced " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
   } catch (e) {
@@ -169,51 +160,6 @@ function render(coins) {
       </div>
     `;
   }).join("");
-}
-
-async function tryFloat() {
-  const video = document.getElementById("pipVideo");
-  const canvas = document.createElement("canvas");
-  canvas.width = 320;
-  canvas.height = 180;
-  const ctx = canvas.getContext("2d");
-
-  function drawFrame() {
-    ctx.fillStyle = "#0a0c0a";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#c8c8c0";
-    ctx.font = "bold 14px monospace";
-    ctx.fillText("PRICE WATCH", 10, 20);
-    lastCoins.forEach((c, i) => {
-      const y = 50 + i * 30;
-      const priceStr = c.price >= 1000 ? Math.round(c.price).toLocaleString() : c.price.toFixed(2);
-      const sign = c.change >= 0 ? "+" : "";
-      ctx.fillStyle = "#8a8a78";
-      ctx.font = "13px monospace";
-      ctx.fillText(c.symbol, 10, y);
-      ctx.fillStyle = "#c8c8c0";
-      ctx.fillText("$" + priceStr, 70, y);
-      ctx.fillStyle = c.change >= 0 ? "#4a7c59" : "#8b3a3a";
-      ctx.fillText(sign + c.change.toFixed(1) + "%", 180, y);
-    });
-  }
-
-  drawFrame();
-  const stream = canvas.captureStream(2);
-  video.srcObject = stream;
-  video.play();
-
-  try {
-    if (document.pictureInPictureEnabled) {
-      await video.requestPictureInPicture();
-    } else {
-      alert("Float not supported in this browser. Try Safari or Chrome.");
-    }
-  } catch (e) {
-    alert("Could not float. Make sure Picture-in-Picture is allowed.");
-  }
-
-  setInterval(drawFrame, 5000);
 }
 
 function manualRefresh() { fetchPrices(); }
